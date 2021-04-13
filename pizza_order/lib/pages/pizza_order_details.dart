@@ -3,7 +3,14 @@ import 'package:pizza_order/ingredient.dart';
 
 const double _pizzaCartSize = 55;
 
-class PizzaOrderDetails extends StatelessWidget {
+class PizzaOrderDetails extends StatefulWidget {
+  @override
+  State<StatefulWidget> createState() {
+    return _PizzaOrderDetailsState();
+  }
+}
+
+class _PizzaOrderDetailsState extends State<PizzaOrderDetails> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,43 +61,171 @@ class PizzaOrderDetails extends StatelessWidget {
   }
 }
 
-class _PizzaDetails extends StatelessWidget {
+class _PizzaDetails extends StatefulWidget {
+  @override
+  State<StatefulWidget> createState() {
+    return _PizzaDetailsState();
+  }
+}
+
+class _PizzaDetailsState extends State<_PizzaDetails> with SingleTickerProviderStateMixin {
+  List<Ingredient> _listIngredients = <Ingredient>[];
+  int _total = 15;
+  final _notifierFocused = ValueNotifier(false);
+  AnimationController _animationController;
+  List<Animation> _animationList = [
+
+  ];
+ BoxConstraints _pizzaContraints;
+
+  @override
+  void initState() {
+    _animationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 900)
+    );
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildIngredientWidget() {
+      List<Widget> elements = [];
+      if(_animationList.isNotEmpty) {
+          for(int i=0; i < _listIngredients.length; i++){
+            Ingredient ingredient = _listIngredients[i];
+            for(int j=0; j < ingredient.positions.length; j++){
+                  final animation = _animationList[i];
+                  final position = ingredient.positions[j];
+                  final positonX = position.dx;
+                  final positonY = position.dy;
+                  double fromX = 0.0, fromY = 0.0;
+                  if(j<1) {
+
+                  }
+            }
+
+            }
+      }
+      return SizedBox.fromSize();
+  }
+
+    void _buildIngredientAnimation() {
+    _animationList.clear();
+    _animationList.add(CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(0.0,0.8,curve: Curves.decelerate))
+    );
+
+    _animationList.add(CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(0.2,0.8,curve: Curves.decelerate))
+    );
+
+    _animationList.add(CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(0.4,1.0,curve: Curves.decelerate))
+    );
+
+    _animationList.add(CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(0.1,0.7,curve: Curves.decelerate))
+    );
+
+    _animationList.add(CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(0.3,1,curve: Curves.decelerate))
+    );
+
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Stack(
       children: [
-        Expanded(child: DragTarget<Ingredient>(
-          onAccept: (ingredient){
+        Expanded(
+            child: DragTarget<Ingredient>(
+          onAccept: (ingredient) {
             print("onAccept");
+            _notifierFocused.value = false;
+            setState(() {
+              _listIngredients.add(ingredient);
+              _total++;
+            });
+            _buildIngredientAnimation();
+            _animationController.forward(from: 0.0);
           },
-          onWillAccept: (ingredient){
+          onWillAccept: (ingredient) {
             print("onWillAccept");
-
+            _notifierFocused.value = true;
+            for (Ingredient i in _listIngredients) {
+              if (i.compare(ingredient)) {
+                return false;
+              }
+            }
+            return true;
           },
-          onLeave: (ingredient){
+          onLeave: (ingredient) {
             print("onLeave");
+            _notifierFocused.value = false;
           },
-
           builder: (context, list, rejects) {
-            return Stack(
-              children: [
-                Image.asset("assets/pizza_order/dish.png"),
-                Padding(
-                  padding: EdgeInsets.all(10),
-                  child: Image.asset("assets/pizza_order/pizza-1.png"),
+            return LayoutBuilder(builder: (context, constraints) {
+              _pizzaContraints = constraints;
+              return Center(
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: _notifierFocused,
+                  builder: (context,focused, _){
+                      return  AnimatedContainer(
+                        duration: Duration(milliseconds: 400),
+                        height: focused
+                            ? constraints.maxHeight
+                            : constraints.maxHeight - 10,
+                        child: Stack(
+                          children: [
+                            Image.asset("assets/pizza_order/dish.png"),
+                            Padding(
+                              padding: EdgeInsets.all(10),
+                              child: Image.asset("assets/pizza_order/pizza-1.png"),
+                            )
+                          ],
+                        ),
+                      );
+                  },
                 )
-              ],
-            );
+             );
+            });
           },
         )),
         SizedBox(
           height: 5,
         ),
-        Text(
-          '\$13',
-          style: TextStyle(
-              color: Colors.brown, fontSize: 30, fontWeight: FontWeight.bold),
-        )
+        AnimatedSwitcher(
+          duration: Duration(milliseconds: 300),
+          transitionBuilder: (child, animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: animation.drive(Tween<Offset>(
+                  begin: Offset(0.0, 0.0),
+                  end: Offset(0.0, animation.value),
+                )),
+                child: child,
+              ),
+            );
+          },
+          child: Text(
+            '\$$_total',
+            key: UniqueKey(),
+            style: TextStyle(
+                color: Colors.brown, fontSize: 30, fontWeight: FontWeight.bold),
+          ),
+        ),
+        _buildIngredientWidget()
       ],
     );
   }
@@ -119,17 +254,14 @@ class _PizzaCartButton extends StatelessWidget {
 class _PizzaIngredients extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.red,
-      child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          itemCount: ingredient.length,
-          itemBuilder: (context, index) {
-            return _PizzaIngredientItem(
-              ingredient: ingredient[index],
-            );
-          }),
-    );
+    return ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: ingredient.length,
+        itemBuilder: (context, index) {
+          return _PizzaIngredientItem(
+            ingredient: ingredient[index],
+          );
+        });
   }
 }
 
@@ -138,28 +270,41 @@ class _PizzaIngredientItem extends StatelessWidget {
   _PizzaIngredientItem({@required this.ingredient});
   @override
   Widget build(BuildContext context) {
-
-    final child = Container(
-        height: 45,
-        width: 45,
-        decoration:
-        BoxDecoration(color: Color(0xFFF5EED3), shape: BoxShape.circle),
-        child: Padding(
-          padding: EdgeInsets.all(5),
-          child: Image.asset(
-            ingredient.image,
-            fit: BoxFit.contain,
+    final child = Padding(
+      padding: EdgeInsets.symmetric(horizontal: 7),
+      child: Container(
+          height: 45,
+          width: 45,
+          decoration:
+              BoxDecoration(color: Color(0xFFF5EED3), shape: BoxShape.circle),
+          child: Padding(
+            padding: EdgeInsets.all(5),
+            child: Image.asset(
+              ingredient.image,
+              fit: BoxFit.contain,
+            ),
+          )),
+    );
+    return Center(
+      child: Draggable(
+        data: ingredient,
+        //feedback: child,
+        feedback: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                blurRadius: 10.0,
+                color: Colors.black26,
+                offset: Offset(0.0,5.0),
+                spreadRadius: 5.0
+              )
+            ]
           ),
-        ));
-
-    return Draggable(
-      data: ingredient,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 7),
           child: child,
         ),
-        feedback: child
+        child: child,
+      ),
     );
-
   }
 }
